@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# Environment and credentials
+.env
+.env.*
+
+# Data: raw IMS archives and anything derived from them live outside the repo
+# (see data/README.md). Only the README is tracked here.
+data/*
+!data/README.md
+*.zip
+*.rar
+
+# Experiment outputs and model artifacts
+artifacts/
+models/
+runs/
+
+# Frontend
+node_modules/
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
