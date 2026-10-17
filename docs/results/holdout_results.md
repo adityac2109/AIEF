@@ -92,3 +92,19 @@ eleven days after the documented end, in the undocumented files.
    after these results; the holdout is not rerun.
 2. No other deviations. No parameter, feature or method was changed after the
    holdout was read.
+
+## Addendum: code changes after the holdout (2026-10-17)
+
+The holdout numbers above were produced by the code at tag
+`protocol-v1-frozen` (`9e61758`). The current code differs from that tag in
+ways that do not touch the evaluation:
+
+- `experiments/holdout.py`: reports are written after all runs (deviation 1).
+- `data/download.py`: an extra check that extracted archive files stay inside
+  their target folder.
+- `config.py`: the data directory may also come from an untracked `.env` file.
+
+Feature extraction, detectors, thresholds, alarm logic, metrics and
+`configs/protocol_v1.toml` are unchanged since the tag. This can be checked with
+`git diff protocol-v1-frozen -- src/bearingguard/features src/bearingguard/models src/bearingguard/evaluation src/bearingguard/experiments/detect.py configs/protocol_v1.toml`.
+The holdout was not rerun.

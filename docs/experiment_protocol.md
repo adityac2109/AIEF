@@ -21,7 +21,8 @@ remaining useful life, and its scores should not be read as either.
 | Bearings that did not fail | B1, B2 | B2, B3, B4 |
 | Channel used per bearing | first of the pair (ch 1, 3, 5, 7) | the single channel |
 
-Test 3 is sealed (see `data/README.md`) and is not used for anything below.
+Test 3 was sealed during all development described here (see `data/README.md`).
+It was later used once, as the holdout ([holdout_protocol.md](holdout_protocol.md)).
 
 ## Labels: proxies only
 
@@ -120,7 +121,7 @@ the setup above to every candidate method under one set of boundaries.
 ## Reproduction
 
 ```bash
-export BEARINGGUARD_DATA_DIR=/path/to/ims     # PowerShell: $env:BEARINGGUARD_DATA_DIR = "C:\data\ims"
+export BEARINGGUARD_DATA_DIR=<path-to-ims-data>   # PowerShell: $env:BEARINGGUARD_DATA_DIR = "<path-to-ims-data>"
 python -m bearingguard.data.download
 python -m bearingguard.data.validate --test 1 2
 python -m bearingguard.features.build --test 1 2 --set time spectral

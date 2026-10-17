@@ -94,7 +94,10 @@ src/bearingguard/
   evaluation/               persistence alarms and alarm metrics
   experiments/              threshold study, unified protocol runner, holdout runner
   reporting/                tables and figures from run outputs
-tests/                      103 tests (parsing, features, leakage, seal, metrics, reports)
+scripts/check_repo_hygiene.py   pre-publication check: data files, credentials, local paths
+scripts/hooks/pre-commit        opt-in hook that runs the check on staged files
+ci/github-actions-ci.yml        CI template (hygiene check + tests); see SECURITY.md to enable
+tests/                      tests: parsing, features, leakage, seal, metrics, reports, hygiene
 ```
 
 ## Setup (Windows, PowerShell)
@@ -106,7 +109,7 @@ py -3.12 -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements-lock.txt   # exact tested versions
 pip install -e ".[dev]"
-pytest                                 # 103 tests, about 1 minute
+pytest                                 # full suite, about 1 minute
 ```
 
 On macOS or Linux use `python3 -m venv .venv` and `source .venv/bin/activate`.
@@ -114,7 +117,8 @@ On macOS or Linux use `python3 -m venv .venv` and `source .venv/bin/activate`.
 ## Reproduce the results
 
 ```powershell
-$env:BEARINGGUARD_DATA_DIR = "D:\data\ims"     # any folder outside the repo, ~7 GB free
+$env:BEARINGGUARD_DATA_DIR = "<path-to-ims-data>"   # any folder outside the repo, ~7 GB free
+                                                    # (or copy .env.example to .env and set it there)
 
 python -m bearingguard.data.download            # 1.06 GB, MD5-checked, extracts tests 1-3
 python -m bearingguard.data.validate --test 1 2
@@ -133,6 +137,16 @@ only runs on a checkout identical to the tag. Its recorded outputs are in
 
 Every run writes `metadata.json` with the Git commit, whether the tree was clean,
 library versions and SHA-256 hashes of its inputs.
+
+## Repository hygiene
+
+```powershell
+python scripts/check_repo_hygiene.py            # tracked files
+python scripts/check_repo_hygiene.py --history  # every version in Git history
+git config core.hooksPath scripts/hooks         # optional: run the check before each commit
+```
+
+See [SECURITY.md](SECURITY.md) for what is checked and how to report a problem.
 
 ## Dataset
 

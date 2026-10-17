@@ -12,7 +12,11 @@ Maintenance Systems (University of Cincinnati) with support from Rexnord Corp.
 - Catalog page: https://data.nasa.gov/dataset/ims-bearings
 - Archive: https://data.nasa.gov/docs/legacy/IMS.zip (1,061,902,801 bytes,
   MD5 `57b2e74587d73b5485fe0d55731e1331`, checked 2026-10-16)
-- License: U.S. Government Works
+- License: the catalog lists it as "Other license specified", linking to
+  U.S. Government Works (https://www.usa.gov/government-works). The data were
+  produced by the IMS Center, not by NASA itself. This repository does **not**
+  redistribute any of the data: users download it from NASA, and only code,
+  summary statistics and figures derived from it are published here.
 - Reference paper (as cited in the dataset readme): Hai Qiu, Jay Lee, Jing Lin,
   "Wavelet Filter-based Weak Signature Detection Method and its Application on
   Roller Bearing Prognostics," *Journal of Sound and Vibration* 289 (2006) 1066–1090.
@@ -20,8 +24,9 @@ Maintenance Systems (University of Cincinnati) with support from Rexnord Corp.
 ## Automated setup
 
 ```bash
-# Windows PowerShell:  $env:BEARINGGUARD_DATA_DIR = "C:\data\ims"
-# bash:                export BEARINGGUARD_DATA_DIR=/path/to/ims
+# Windows PowerShell:  $env:BEARINGGUARD_DATA_DIR = "<path-to-ims-data>"
+# bash:                export BEARINGGUARD_DATA_DIR=<path-to-ims-data>
+# or: copy .env.example to .env (untracked) and set the path there
 python -m bearingguard.data.download   # download, verify MD5, extract
 python -m bearingguard.data.validate --test 1 2
 ```
@@ -88,9 +93,12 @@ Found by `download` and `validate` on the archive with MD5 `57b2e745…`:
 All 2,156 test 1 files and 984 test 2 files match the documented shape
 (20,480 × 8 and 20,480 × 4) and contain only finite numeric values.
 
-## Test 3 is sealed
+## Test 3: holdout (already used)
 
-Test 3 is the final holdout. `bearingguard.data.ims.get_spec(3)` raises
-`SealedTestError` unless it is called with `allow_sealed=True`, which only the
-frozen final evaluation should do. The download step counts test 3 files but
-never reads their contents.
+Test 3 was sealed throughout development and was unsealed **once**, by the
+frozen procedure in [docs/holdout_protocol.md](../docs/holdout_protocol.md);
+results are in [docs/results/holdout_results.md](../docs/results/holdout_results.md).
+It is no longer an untouched holdout and must not be used to tune or select
+methods. The code-level guard remains: `bearingguard.data.ims.get_spec(3)`
+raises `SealedTestError` unless called with `allow_sealed=True`, so development
+code cannot read it by accident.

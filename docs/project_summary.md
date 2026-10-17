@@ -19,8 +19,8 @@ documented end time.
 
 - Built BearingGuard, a Python pipeline (NumPy, SciPy, pandas, scikit-learn) for
   bearing degradation detection on NASA IMS vibration data (3 run-to-failure
-  tests, 9,461 usable one-second snapshots at 20 kHz), with 103 automated tests
-  covering parsing, leakage prevention and holdout sealing.
+  tests, 9,461 usable one-second snapshots at 20 kHz), with 130 automated tests
+  covering parsing, leakage prevention, holdout sealing and publication hygiene.
 - Designed a leakage-safe protocol: per-bearing calibration, causal scoring
   checked by tests, and a sealed holdout that could only be opened from a clean
   checkout matching a frozen Git tag. Evaluated 7 detector configurations
