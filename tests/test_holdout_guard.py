@@ -66,3 +66,27 @@ def test_derived_config_changes_only_allowed_keys():
 def test_derive_config_requires_every_key():
     with pytest.raises(ValueError, match="no line matching"):
         holdout.derive_config_text('name = "x"\ntests = [1]\n', "documented")
+
+
+def test_reports_are_written_only_after_all_runs(monkeypatch, tmp_path):
+    calls = []
+    monkeypatch.setattr(holdout, "check_frozen", lambda tag: "abc1234")
+    monkeypatch.setattr(holdout, "get_data_dir", lambda *_: tmp_path)
+    monkeypatch.setattr(holdout, "validate_test", lambda *a, **k: [])
+    monkeypatch.setattr(holdout, "write_manifest", lambda *a, **k: None)
+    monkeypatch.setattr(holdout, "summarize", lambda *a, **k: "")
+
+    class _Frame:
+        def to_csv(self, *a, **k):
+            pass
+
+    monkeypatch.setattr(holdout, "build_features", lambda *a, **k: _Frame())
+    import bearingguard.experiments.detect as detect
+    import bearingguard.reporting.report as report
+    monkeypatch.setattr(detect, "main", lambda argv: calls.append("run"))
+    monkeypatch.setattr(report, "build_report", lambda *a, **k: calls.append("report"))
+
+    holdout.main(["--tag", "protocol-v1-frozen", "--out-root", str(tmp_path)])
+
+    n = len(holdout.VARIANTS)
+    assert calls == ["run"] * n + ["report"] * n

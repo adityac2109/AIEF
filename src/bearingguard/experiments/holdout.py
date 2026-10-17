@@ -94,6 +94,10 @@ def main(argv: list[str] | None = None) -> int:
         cfg_path.write_text(text)
         detect.main([str(cfg_path), "--allow-sealed", "--out-root", str(args.out_root),
                      *(["--data-dir", args.data_dir] if args.data_dir else [])])
+    # Reports go into the tracked docs/ tree. Writing them only after every run
+    # keeps each run's recorded git_dirty flag about code, not about our own
+    # output (v1 wrote them in between; see docs/results/holdout_results.md).
+    for variant in VARIANTS:
         build_report(args.out_root / f"holdout_v1_{variant}",
                      Path("docs/results") / f"holdout_v1_{variant}", data_dir)
     return 0
