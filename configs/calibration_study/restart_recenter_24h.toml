@@ -1,0 +1,32 @@
+# Calibration study, method A sensitivity: re-center only after gaps >= 24 h
+# (multi-day stops).
+
+name = "calib_restart_recenter_24h"
+
+tests = [1, 2]                     # test 3 is the sealed holdout
+
+# Each bearing is calibrated on its own first N usable snapshots
+# (~24 h at the nominal 10 min interval; test 1's early 5 min files make it shorter there).
+calibration_snapshots = 144
+
+features = ["rms", "kurtosis", "crest_factor"]
+
+# Test 1 has two channels per bearing, tests 2-3 have one. axis = 0 uses the
+# first channel of each pair so every bearing is monitored by one sensor.
+# Which physical axis that is, the readme does not say.
+axis = 0
+
+k_sigma = 3.0
+sensitivity_k = [3.0, 4.0, 5.0, 6.0]
+
+# An alarm is raised when >= required of the last `window` snapshots exceed.
+persistence_required = 3
+persistence_window = 5
+
+# Intervals longer than this are rig-off periods (the readme: experiment
+# resumed the next working day) and do not count as monitored time.
+max_operating_gap_s = 3600
+
+[recalibration]
+restart_gap_s = 86400
+snapshots = 18
