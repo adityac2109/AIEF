@@ -26,7 +26,7 @@ from bearingguard.data.ims import TESTS, extracted_dir, list_snapshots
 IMS_URL = "https://data.nasa.gov/docs/legacy/IMS.zip"
 # S3 ETag of the published object (single-part upload, so it equals the MD5).
 # Recorded 2026-10-16; object Last-Modified 2025-03-26, 1,061,902,801 bytes.
-IMS_MD5 = "57b2e74587d73b5485fe0d55731e1331"
+IMS_MD5 = "57b2e74587d73b5485fe0d55731e1331"  # pragma: allowlist secret (public checksum)
 
 
 def md5sum(path: Path, chunk: int = 1 << 20) -> str:
@@ -91,6 +91,19 @@ def extract(zip_path: Path, raw_dir: Path) -> None:
             target.mkdir(parents=True, exist_ok=True)
             subprocess.run([tar, "-xf", str(rar_path), "-C", str(target)], check=True)
             rar_path.unlink()
+            assert_within(target)
+
+
+def assert_within(root: Path) -> None:
+    """Fail if extraction placed anything outside root.
+
+    bsdtar already refuses absolute and ".." member paths by default; this is a
+    second check, since the archive comes from an external server.
+    """
+    base = root.resolve()
+    for p in root.rglob("*"):
+        if not p.resolve().is_relative_to(base):
+            raise RuntimeError(f"extracted path escapes {base}: {p}")
 
 
 def report_counts(data_dir: Path) -> None:
