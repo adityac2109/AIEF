@@ -1,4 +1,4 @@
-"""Run the per-bearing k-sigma threshold baseline.
+"""Run the per-bearing k-sigma threshold detector and its calibration variants.
 
 Usage:
     python -m bearingguard.experiments.threshold_baseline configs/threshold_baseline.toml
@@ -6,6 +6,11 @@ Usage:
 Task: for each bearing, raise alarms on snapshots whose condition indicators
 depart from that bearing's own early-life calibration window. No model is
 trained across bearings or tests, so no information moves between them.
+
+Optional config keys select calibration variants (defaults reproduce the
+baseline exactly):
+    normalization = "cross_bearing_log_ratio"     # see preprocessing.normalization
+    [recalibration] restart_gap_s, snapshots     # see models.recalibration
 
 Writes to runs/<name>/: per_bearing.csv (metrics), sensitivity.csv (k grid),
 timeline.csv (per-snapshot scores and alarms), metadata.json, config.toml.
@@ -29,11 +34,35 @@ import pandas as pd
 from bearingguard import __version__
 from bearingguard.config import get_data_dir
 from bearingguard.data.ims import get_spec
-from bearingguard.evaluation.alarms import alarm_metrics, persistent_alarm
+from bearingguard.evaluation.alarms import (
+    alarm_metrics,
+    persistent_alarm,
+    restart_triggered_episodes,
+)
 from bearingguard.features.build import features_path, load_features
+from bearingguard.models.recalibration import recentered_scores
 from bearingguard.models.threshold import ZScoreThreshold
+from bearingguard.preprocessing.normalization import cross_bearing_log_ratio
 
 ANY = "any"  # detector that alarms when any configured feature exceeds
+
+# Restart diagnostic: same definition for every method, independent of any
+# method's own recalibration settings.
+DIAG_RESTART_GAP_S = 8 * 3600
+DIAG_WINDOW_H = 6.0
+
+
+def bearing_scores(df: pd.DataFrame, cfg: dict) -> tuple[np.ndarray, np.ndarray]:
+    """z-scores and scored-mask for the evaluation rows (after initial calibration)."""
+    n_cal = cfg["calibration_snapshots"]
+    X = df[cfg["features"]].to_numpy()
+    recal = cfg.get("recalibration")
+    if recal:
+        z, scored = recentered_scores(X, df["timestamp"].to_numpy(), n_cal,
+                                      recal["snapshots"], recal["restart_gap_s"])
+        return z[n_cal:], scored[n_cal:]
+    z = ZScoreThreshold(k=np.inf).fit(X[:n_cal]).score(X[n_cal:])
+    return z, np.ones(len(z), dtype=bool)
 
 
 def run_bearing(df: pd.DataFrame, cfg: dict, k: float) -> tuple[list[dict], pd.DataFrame]:
@@ -42,21 +71,28 @@ def run_bearing(df: pd.DataFrame, cfg: dict, k: float) -> tuple[list[dict], pd.D
     if len(df) <= n_cal:
         raise ValueError("not enough snapshots after calibration")
     feats = cfg["features"]
-    calib, ev = df.iloc[:n_cal], df.iloc[n_cal:]
+    ev = df.iloc[n_cal:]
 
-    model = ZScoreThreshold(k).fit(calib[feats].to_numpy())
-    z = model.score(ev[feats].to_numpy())
-    exceed = {f: z[:, i] > k for i, f in enumerate(feats)}
-    exceed[ANY] = np.any(z > k, axis=1)
+    z, scored = bearing_scores(df, cfg)
+    with np.errstate(invalid="ignore"):  # unscored rows are NaN and never exceed
+        exceed = {f: z[:, i] > k for i, f in enumerate(feats)}
+        exceed[ANY] = np.any(z > k, axis=1)
 
     ts = ev["timestamp"].to_numpy()
     timeline = ev[["test_id", "timestamp", "bearing", "channel"]].copy()
     timeline[[f"z_{f}" for f in feats]] = z
+    timeline["scored"] = scored
     results = []
     for det, ex in exceed.items():
         alarm = persistent_alarm(ex, cfg["persistence_required"], cfg["persistence_window"])
         timeline[f"alarm_{det}"] = alarm
-        results.append({"detector": det, **alarm_metrics(ts, alarm, cfg["max_operating_gap_s"])})
+        results.append({
+            "detector": det,
+            **alarm_metrics(ts, alarm, cfg["max_operating_gap_s"]),
+            "blind_fraction": float(1.0 - scored.mean()),
+            "restart_triggered_episodes": restart_triggered_episodes(
+                ts, alarm, DIAG_RESTART_GAP_S, DIAG_WINDOW_H),
+        })
     return results, timeline
 
 
@@ -66,6 +102,11 @@ def run(cfg: dict, data_dir: Path) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataF
         spec = get_spec(test_id)  # refuses the sealed holdout
         feats = load_features(data_dir, test_id)
         feats = feats[feats["axis"] == cfg["axis"]]
+        normalization = cfg.get("normalization", "none")
+        if normalization == "cross_bearing_log_ratio":
+            feats = cross_bearing_log_ratio(feats, cfg["features"])
+        elif normalization != "none":
+            raise ValueError(f"unknown normalization {normalization!r}")
         for bearing, df in feats.groupby("bearing"):
             df = df.sort_values("timestamp", ignore_index=True)
             info = {

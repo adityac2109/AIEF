@@ -6,6 +6,7 @@ from bearingguard.evaluation.alarms import (
     episode_starts,
     operating_hours,
     persistent_alarm,
+    restart_triggered_episodes,
 )
 
 
@@ -65,3 +66,16 @@ def test_alarm_metrics_lead_time_and_rates():
 def test_alarm_metrics_without_alarms():
     m = alarm_metrics(ts([0, 10, 20]), np.zeros(3, bool), max_gap_s=3600)
     assert m["episodes"] == 0 and np.isnan(m["first_alarm_lead_h"])
+
+
+def test_restart_triggered_episodes_counts_only_shortly_after_long_gaps():
+    # session 1: 0..50 min; 10 h shutdown; session 2 from 650 min
+    minutes = list(range(0, 60, 10)) + list(range(650, 1650, 10))
+    t = ts(minutes)
+    alarm = np.zeros(len(t), bool)
+    alarm[2:4] = True  # before any restart: not counted
+    i, j = minutes.index(700), minutes.index(1500)
+    alarm[i:i + 2] = True  # 50 min after the restart: counted
+    alarm[j:j + 2] = True  # 14 h after the restart: not counted
+    assert restart_triggered_episodes(t, alarm, restart_gap_s=8 * 3600, window_h=6) == 1
+    assert restart_triggered_episodes(t, alarm, restart_gap_s=24 * 3600, window_h=6) == 0

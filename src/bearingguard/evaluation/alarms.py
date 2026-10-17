@@ -40,6 +40,25 @@ def operating_hours(timestamps: np.ndarray, max_gap_s: float) -> np.ndarray:
     return np.cumsum(dt) / 3600.0
 
 
+def restart_triggered_episodes(timestamps: np.ndarray, alarm: np.ndarray,
+                               restart_gap_s: float, window_h: float) -> int:
+    """Episodes that start within window_h after a shutdown >= restart_gap_s.
+
+    A diagnostic for alarms caused by rig restarts rather than bearing damage.
+    Defined identically for every method so they can be compared.
+    """
+    t = np.asarray(timestamps, dtype="datetime64[s]").astype(np.int64)
+    restarts = t[np.flatnonzero(np.diff(t) >= restart_gap_s) + 1]
+    starts = t[episode_starts(alarm)]
+    if restarts.size == 0 or starts.size == 0:
+        return 0
+    # Most recent restart at or before each episode start.
+    pos = np.searchsorted(restarts, starts, side="right") - 1
+    valid = pos >= 0
+    since = starts[valid] - restarts[pos[valid]]
+    return int(np.sum(since <= window_h * 3600))
+
+
 def alarm_metrics(timestamps: np.ndarray, alarm: np.ndarray, max_gap_s: float) -> dict:
     hours = operating_hours(timestamps, max_gap_s)
     total = hours[-1] - hours[0]

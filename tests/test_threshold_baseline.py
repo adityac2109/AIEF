@@ -68,3 +68,32 @@ def test_too_few_snapshots_rejected():
 def test_sealed_test_refused(tmp_path):
     with pytest.raises(SealedTestError):
         run({**CFG, "tests": [3]}, tmp_path)
+
+
+def test_default_config_scores_every_evaluation_row():
+    res, tl = run_bearing(bearing_frame(), CFG, 3.0)
+    assert tl["scored"].all()
+    assert all(r["blind_fraction"] == 0.0 for r in res)
+
+
+def test_recalibration_variant_blinds_restart_window():
+    df = bearing_frame(n=80)
+    df.loc[50:, "timestamp"] += pd.Timedelta(hours=48)  # shutdown before row 50
+    df.loc[50:, "rms"] += 0.05                          # 10-sigma level shift on restart
+    cfg = {**CFG, "recalibration": {"restart_gap_s": 8 * 3600, "snapshots": 10}}
+
+    base_res, _ = run_bearing(df, CFG, 3.0)
+    res, tl = run_bearing(df, cfg, 3.0)
+    by_det = {r["detector"]: r for r in res}
+    base = {r["detector"]: r for r in base_res}
+
+    assert (~tl["scored"]).sum() == 10
+    assert base["rms"]["restart_triggered_episodes"] == 1
+    assert by_det["rms"]["episodes"] == 0
+
+
+def test_unknown_normalization_rejected(tmp_path, monkeypatch):
+    import bearingguard.experiments.threshold_baseline as tb
+    monkeypatch.setattr(tb, "load_features", lambda d, t: bearing_frame().assign(axis=0))
+    with pytest.raises(ValueError, match="unknown normalization"):
+        tb.run({**CFG, "normalization": "zscore"}, tmp_path)
