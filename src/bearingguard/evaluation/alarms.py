@@ -59,6 +59,17 @@ def restart_triggered_episodes(timestamps: np.ndarray, alarm: np.ndarray,
     return int(np.sum(since <= window_h * 3600))
 
 
+def alarm_in_final_window(timestamps: np.ndarray, alarm: np.ndarray,
+                          max_gap_s: float, window_h: float) -> bool:
+    """True if the alarm is on at any snapshot in the last window_h operating hours.
+
+    Used as the detection criterion for failed bearings: an alarm that fired
+    early and then cleared well before failure does not count as detecting it.
+    """
+    hours = operating_hours(timestamps, max_gap_s)
+    return bool(np.any(np.asarray(alarm, bool)[hours >= hours[-1] - window_h]))
+
+
 def alarm_metrics(timestamps: np.ndarray, alarm: np.ndarray, max_gap_s: float) -> dict:
     hours = operating_hours(timestamps, max_gap_s)
     total = hours[-1] - hours[0]

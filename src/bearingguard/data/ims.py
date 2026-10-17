@@ -32,6 +32,9 @@ class TestSpec:
     bearing_channels: dict[int, tuple[int, ...]]
     # bearing number -> failure mode documented at end of test
     failures: dict[int, str]
+    # Last recording time stated in the readme. Test 3's archive continues
+    # beyond it; see data/README.md and docs/holdout_protocol.md.
+    documented_end: datetime | None = None
     # Sealed tests are the final holdout; see load guards below.
     sealed: bool = False
 
@@ -46,6 +49,7 @@ TESTS: dict[int, TestSpec] = {
         n_channels=8,
         bearing_channels={1: (0, 1), 2: (2, 3), 3: (4, 5), 4: (6, 7)},
         failures={3: "inner race", 4: "roller element"},
+        documented_end=datetime(2003, 11, 25, 23, 39, 56),
     ),
     2: TestSpec(
         test_id=2,
@@ -54,6 +58,7 @@ TESTS: dict[int, TestSpec] = {
         n_channels=4,
         bearing_channels={1: (0,), 2: (1,), 3: (2,), 4: (3,)},
         failures={1: "outer race"},
+        documented_end=datetime(2004, 2, 19, 6, 22, 39),
     ),
     3: TestSpec(
         test_id=3,
@@ -62,6 +67,7 @@ TESTS: dict[int, TestSpec] = {
         n_channels=4,
         bearing_channels={1: (0,), 2: (1,), 3: (2,), 4: (3,)},
         failures={3: "outer race"},
+        documented_end=datetime(2004, 4, 4, 19, 1, 57),
         sealed=True,
     ),
 }

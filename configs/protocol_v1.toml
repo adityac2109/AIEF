@@ -1,0 +1,94 @@
+# Candidate-method protocol v1.
+#
+# Every method below runs on identical rows and boundaries
+# (see src/bearingguard/experiments/detect.py). On development tests 1-2 this
+# config produces the comparison; the holdout procedure
+# (docs/holdout_protocol.md) runs the *same file* with tests = [3]. All methods
+# are carried to the holdout, so none is selected using development results.
+#
+# Values were fixed before any output of this runner was seen. The grids are
+# sensitivity analyses; "primary" settings were declared in advance and are the
+# ones quoted in summaries.
+
+name = "protocol_v1_dev"
+tests = [1, 2]
+axis = 0                            # first channel per bearing (test 1 has two)
+restrict_to_documented_end = true   # stop at the readme's stated end of each test
+
+calibration_snapshots = 144         # per bearing; never scored
+calibration_holdout_snapshots = 48  # last 48 of those: threshold calibration for score-based detectors
+
+persistence_required = 3            # alarm when >= 3 of the last 5 snapshots exceed
+persistence_window = 5
+max_operating_gap_s = 3600          # longer gaps are rig-off time, not monitored time
+final_window_h = 24                 # failed bearing "detected" if in alarm within its last 24 operating h
+
+[recentering]                       # from the calibration study (docs/results/calibration_study.md)
+restart_gap_s = 28800
+snapshots = 18
+
+[feature_sets]
+time = ["rms", "kurtosis", "crest_factor"]
+# hf_energy_ratio is excluded: on tests 1-2 it fell, not rose, as damage grew,
+# which contradicts the one-sided detectors (docs/results/detector_comparison.md).
+time_env = ["rms", "kurtosis", "crest_factor", "env_bpfo", "env_bpfi", "env_bsf"]
+
+[isolation_forest]
+n_estimators = 200
+seeds = [0, 1, 2, 3, 4]
+primary_seed = 0
+
+[grid]
+k_sigma = [3.0, 4.0, 5.0, 6.0]
+alpha = [0.1, 0.05, 0.0205]         # p <= 0.0205 means p = 1/49: score above all 48 calibration scores
+primary_k = 3.0
+primary_alpha = 0.05
+
+[[methods]]
+name = "zscore_time_raw"            # original baseline (no restart handling), for reference
+detector = "zscore"
+features = "time"
+threshold = "ksigma"
+recenter = false
+
+[[methods]]
+name = "zscore_time"
+detector = "zscore"
+features = "time"
+threshold = "ksigma"
+recenter = true
+
+[[methods]]
+name = "zscore_time_env"
+detector = "zscore"
+features = "time_env"
+threshold = "ksigma"
+recenter = true
+
+[[methods]]
+name = "iforest_time"
+detector = "iforest"
+features = "time"
+threshold = "ksigma"
+recenter = true
+
+[[methods]]
+name = "iforest_time_env"
+detector = "iforest"
+features = "time_env"
+threshold = "ksigma"
+recenter = true
+
+[[methods]]
+name = "iforest_time_pvalue"
+detector = "iforest"
+features = "time"
+threshold = "pvalue"
+recenter = true
+
+[[methods]]
+name = "iforest_time_env_pvalue"
+detector = "iforest"
+features = "time_env"
+threshold = "pvalue"
+recenter = true
