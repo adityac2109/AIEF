@@ -91,13 +91,39 @@ Per bearing and detector (`runs/<name>/per_bearing.csv`):
 
 Operating time excludes gaps over 1 h between snapshots (rig switched off).
 
+## Protocol v1: candidate methods
+
+`configs/protocol_v1.toml`, run by `bearingguard.experiments.detect`, extends
+the setup above to every candidate method under one set of boundaries.
+
+| Rows of each bearing | Use |
+|---|---|
+| 1–96 | Isolation Forest fit rows; part of z-score calibration |
+| 97–144 | held-out calibration scores for Isolation Forest thresholds; part of z-score calibration |
+| 145 – end | evaluation; restart windows (18 snapshots after a shutdown ≥ 8 h) unscored |
+
+- **Features.** Time-domain features as above, plus envelope SNR at BPFO, BPFI and
+  BSF (`bearingguard.features.spectral`). The defect frequencies are computed
+  from the ZA-2115 geometry; the band and tolerances are fixed in advance.
+  Units cancel in every spectral feature.
+- **Restart re-centering** is applied to the features, so every detector sees
+  the same adjusted inputs.
+- **Isolation Forest.** 200 trees, standardized on the fit rows, 5 seeds.
+- **Thresholds.** k·σ of the held-out calibration scores, or an empirical
+  p-value against them (exceed when p ≤ α). The p-value is valid only under
+  exchangeability; its observed rate is measured, not assumed.
+- **Extra metrics.** `detected` (failed bearing in alarm within its last 24
+  operating hours), `episodes_per_100h`, and `validity.csv` (per-snapshot
+  exceedance rate vs α near calibration, in the first half, and over the whole run).
+- **Holdout.** [holdout_protocol.md](holdout_protocol.md).
+
 ## Reproduction
 
 ```bash
 export BEARINGGUARD_DATA_DIR=/path/to/ims     # PowerShell: $env:BEARINGGUARD_DATA_DIR = "C:\data\ims"
 python -m bearingguard.data.download
 python -m bearingguard.data.validate --test 1 2
-python -m bearingguard.features.build --test 1 2
+python -m bearingguard.features.build --test 1 2 --set time spectral
 python -m bearingguard.experiments.threshold_baseline configs/threshold_baseline.toml
 for c in configs/calibration_study/*.toml; do
   python -m bearingguard.experiments.threshold_baseline "$c"
@@ -106,6 +132,8 @@ python -m bearingguard.experiments.compare runs/threshold_baseline_v1 \
   runs/calib_restart_recenter_8h runs/calib_restart_recenter_1h \
   runs/calib_restart_recenter_24h runs/calib_cross_bearing --k 3 \
   --out docs/results/calibration_study_tables.md
+python -m bearingguard.experiments.detect configs/protocol_v1.toml
+python -m bearingguard.reporting.report runs/protocol_v1_dev --out docs/results/protocol_v1_dev
 ```
 
 Each run writes `metadata.json` with the Git commit, whether the tree was clean,

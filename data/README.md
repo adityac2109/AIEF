@@ -76,8 +76,8 @@ Found by `download` and `validate` on the archive with MD5 `57b2e745…`:
   (2004-04-04 19:01:57). After that, 1,876 undocumented files continue until
   2004-04-18 02:42:55. This was established from filenames only; no test 3
   signal contents were read. The readme places the bearing 3 failure "at the end
-  of the test", so where failure falls in the holdout is unresolved and must be
-  decided before test 3 is unsealed.
+  of the test". How the holdout treats these files was decided before unsealing:
+  see [docs/holdout_protocol.md](../docs/holdout_protocol.md).
 - **Test 1 has 145 five-minute intervals, not 43 files.** Forty of them fall in
   the first 43 files, as documented; the rest occur later in the run. Test 1 also
   has 21 gaps longer than 1 h, the longest 148 h.
