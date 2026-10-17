@@ -67,8 +67,9 @@ def check_file(path: Path, timestamp: datetime, spec: TestSpec,
 
 
 def validate_test(data_dir: Path, test_id: int,
-                  dead_threshold: float = DEAD_RMS_THRESHOLD) -> list[FileRecord]:
-    spec = get_spec(test_id)  # refuses the sealed holdout
+                  dead_threshold: float = DEAD_RMS_THRESHOLD,
+                  allow_sealed: bool = False) -> list[FileRecord]:
+    spec = get_spec(test_id, allow_sealed=allow_sealed)  # refuses the sealed holdout by default
     snapshots = list_snapshots(extracted_dir(data_dir, test_id))
     if not snapshots:
         raise FileNotFoundError(f"No snapshot files under {extracted_dir(data_dir, test_id)}")
