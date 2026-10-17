@@ -20,7 +20,7 @@ spec.loader.exec_module(hygiene)
 @pytest.mark.parametrize("line, rule", [
     ("token = " + "gh" + "p_" + "A1b2" * 9, "GitHub token"),
     ("AK" + "IA" + "ABCDEFGHIJKLMNOP", "AWS access key id"),
-    ("-" * 5 + "BEGIN RSA PRIVATE KEY" + "-" * 5, "private key"),
+    ("-" * 5 + "BEGIN RSA " + "PRIVATE" + " KEY" + "-" * 5, "private key"),
     ("Account" + "Key=" + "x" * 30, "Azure connection string"),
     ("pass" + 'word = "' + "hunter2hunter2" + '"', "hard-coded credential"),
     ("C:" + "\\Users\\" + "someone\\data", "absolute user path"),
