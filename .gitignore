@@ -22,10 +22,11 @@ data/*
 *.zip
 *.rar
 
-# Experiment outputs and model artifacts
-artifacts/
-models/
-runs/
+# Experiment outputs and model artifacts (root-anchored so that source
+# packages such as src/bearingguard/models/ are not ignored)
+/artifacts/
+/models/
+/runs/
 
 # Frontend
 node_modules/
