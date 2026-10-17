@@ -25,6 +25,30 @@ def session_starts(timestamps: np.ndarray, restart_gap_s: float) -> np.ndarray:
     return np.flatnonzero(np.diff(t) >= restart_gap_s) + 1
 
 
+def recenter_features(X: np.ndarray, timestamps: np.ndarray, n_initial: int,
+                      n_restart: int, restart_gap_s: float) -> tuple[np.ndarray, np.ndarray]:
+    """Shift each post-restart session back to the initial calibration mean.
+
+    Returns (X_adj, restart_window): rows of a session after a restart become
+    x - mean(restart window) + mean(initial calibration), and restart_window
+    marks the rows used to estimate the session mean (these must not be scored).
+    Each shift uses only rows at the start of its own session, which precede
+    every row it is applied to, so the transform is causal. Any detector can
+    then run on X_adj unchanged.
+    """
+    X = np.asarray(X, dtype=np.float64)
+    initial_mean = X[:n_initial].mean(axis=0)
+    offset = np.zeros_like(X)
+    restart_window = np.zeros(len(X), dtype=bool)
+    for s in session_starts(timestamps, restart_gap_s):
+        if s < n_initial:
+            continue  # the shutdown falls inside the initial calibration window
+        window = slice(s, min(s + n_restart, len(X)))
+        offset[s:] = X[window].mean(axis=0) - initial_mean
+        restart_window[window] = True
+    return X - offset, restart_window
+
+
 def recentered_scores(X: np.ndarray, timestamps: np.ndarray, n_initial: int,
                       n_restart: int, restart_gap_s: float) -> tuple[np.ndarray, np.ndarray]:
     """Return (z, scored): z-scores for every row and a mask of scored rows.
@@ -33,18 +57,10 @@ def recentered_scores(X: np.ndarray, timestamps: np.ndarray, n_initial: int,
     only calibration rows that precede it, so the procedure is causal.
     """
     X = np.asarray(X, dtype=np.float64)
+    X_adj, restart_window = recenter_features(X, timestamps, n_initial, n_restart, restart_gap_s)
     base = ZScoreThreshold(k=np.inf).fit(X[:n_initial])
-    mean = np.tile(base.mean_, (len(X), 1))
-    scored = np.zeros(len(X), dtype=bool)
-    scored[n_initial:] = True
-
-    for s in session_starts(timestamps, restart_gap_s):
-        if s < n_initial:
-            continue  # the shutdown falls inside the initial calibration window
-        window = slice(s, min(s + n_restart, len(X)))
-        mean[s:] = X[window].mean(axis=0)
-        scored[window] = False
-
-    z = (X - mean) / base.std_
+    scored = ~restart_window
+    scored[:n_initial] = False
+    z = base.score(X_adj)
     z[~scored] = np.nan
     return z, scored
