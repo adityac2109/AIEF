@@ -1,0 +1,5 @@
+#!/bin/sh
+# Opt-in pre-commit hook: blocks commits whose staged files contain dataset
+# files, credentials, local paths or email addresses.
+# Enable once per clone:  git config core.hooksPath scripts/hooks
+exec python scripts/check_repo_hygiene.py --staged

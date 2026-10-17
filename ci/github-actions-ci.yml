@@ -1,0 +1,36 @@
+# GitHub Actions workflow (template). To enable it, move this file to
+# .github/workflows/ci.yml and push. Pushing workflow files requires a token
+# with the "workflow" scope (e.g. `gh auth refresh -s workflow`).
+#
+# No dataset is needed: the tests use synthetic fixtures, and the hygiene
+# check scans tracked files and full history for data files, credentials,
+# local paths and email addresses.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history for the history scan
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Repository hygiene (tracked files and history)
+        run: |
+          python scripts/check_repo_hygiene.py
+          python scripts/check_repo_hygiene.py --history
+      - name: Install
+        run: |
+          pip install -r requirements-lock.txt
+          pip install -e . --no-deps
+      - name: Tests
+        run: pytest -q

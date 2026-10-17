@@ -11,9 +11,26 @@ venv/
 htmlcov/
 .ipynb_checkpoints/
 
-# Environment and credentials
+# Environment, credentials and key material
 .env
 .env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.ppk
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+credentials*.json
+secrets*.json
+*.secret
+
+# Local-only notes and audit reports (never published)
+/.local/
 
 # Data: raw IMS archives and anything derived from them live outside the repo
 # (see data/README.md). Only the README is tracked here.
@@ -27,6 +44,18 @@ data/*
 /artifacts/
 /models/
 /runs/
+*.log
+*.pkl
+*.pickle
+*.joblib
+*.npy
+*.npz
+*.h5
+*.pt
+*.pth
+*.onnx
+*.sqlite
+*.db
 
 # Frontend
 node_modules/
